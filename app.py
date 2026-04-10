@@ -16,7 +16,7 @@ last_promo = {}
 EMOJIS = ["❤️","🔥","😂","😍","👍"]
 
 PROMO_TEXT = "🚀 Powered by Muskan Bot Panel\n💡 Apna bot yaha bana sakte ho"
-WEBSITE_LINK = "https://YOUR-VERCEL-LINK.vercel.app"  # 👈 change this
+WEBSITE_LINK = "https://musuuu-reaction.vercel.app"  # 👈 change this
 
 def run_bot(token):
     bot = telebot.TeleBot(token)
