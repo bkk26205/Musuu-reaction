@@ -1,90 +1,51 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import telebot
+from flask import Flask, request, jsonify
 import threading
-import random
-from datetime import datetime, timedelta
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 app = Flask(__name__)
-CORS(app)
 
-bots = {}
-running = {}
-last_promo = {}
-
-EMOJIS = ["❤️","🔥","😂","😍","👍"]
-
-PROMO_TEXT = "🚀 Powered by Muskan Bot Panel\n💡 Apna bot yaha bana sakte ho"
-WEBSITE_LINK = "https://musuuu-reaction.vercel.app"  # 👈 change this
+running_bots = {}
 
 def run_bot(token):
     bot = telebot.TeleBot(token)
-    running[token] = True
-    last_promo[token] = datetime.now()
+
+    @bot.message_handler(commands=['start'])
+    def start(msg):
+        bot.send_message(msg.chat.id, "✅ Bot Active! Send any message")
 
     @bot.message_handler(func=lambda m: True)
     def react(message):
-        if not running.get(token):
-            return
-
         try:
-            # 🔥 Auto Reaction
-            emoji = random.choice(EMOJIS)
-            bot.send_reaction(message.chat.id, message.message_id, emoji)
+            bot.send_message(message.chat.id, "🔥 Reaction working!")
+            print("Message received:", message.text)
+        except Exception as e:
+            print("Error:", e)
 
-            # 🎯 Promo only in private chat (1 time in 24h)
-            if message.chat.type == "private":
-                now = datetime.now()
-
-                if now - last_promo[token] > timedelta(hours=24):
-
-                    markup = InlineKeyboardMarkup()
-                    btn = InlineKeyboardButton(
-                        "🌐 Visit Website",
-                        url=WEBSITE_LINK
-                    )
-                    markup.add(btn)
-
-                    bot.send_message(
-                        message.chat.id,
-                        PROMO_TEXT,
-                        reply_markup=markup
-                    )
-
-                    last_promo[token] = now
-
-        except:
-            pass
-
-    bot.infinity_polling()
+    print("Bot polling started...")
+    bot.infinity_polling(skip_pending=True)
 
 @app.route("/start", methods=["POST"])
-def start():
-    token = request.json.get("token")
+def start_bot():
+    data = request.json
+    token = data.get("token")
 
-    if token in bots:
-        return jsonify({"msg": "Already Running"})
+    if not token:
+        return jsonify({"msg": "Token missing"})
 
-    t = threading.Thread(target=run_bot, args=(token,))
-    t.start()
+    if token in running_bots:
+        return jsonify({"msg": "Already running"})
 
-    bots[token] = t
-    return jsonify({"msg": "Bot Started"})
+    try:
+        t = threading.Thread(target=run_bot, args=(token,))
+        t.daemon = True
+        t.start()
 
-@app.route("/stop", methods=["POST"])
-def stop():
-    token = request.json.get("token")
-
-    if token in running:
-        running[token] = False
-        return jsonify({"msg": "Bot Stopped"})
-
-    return jsonify({"msg": "Bot Not Found"})
+        running_bots[token] = True
+        return jsonify({"msg": "Bot started successfully"})
+    
+    except Exception as e:
+        return jsonify({"msg": str(e)})
 
 @app.route("/")
 def home():
-    return "✅ Bot Server Running"
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    return "Backend Running!"
